@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build APK Manual Setup
 
 on:
   push:
@@ -29,44 +29,53 @@ jobs:
           wget \
           curl \
           libncurses5 \
-          python3-pip \
           autoconf \
           automake \
           libtool \
-          pkg-config
+          pkg-config \
+          zlib1g-dev
         
-    - name: Install Buildozer and dependencies
+    - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install buildozer cython==0.29.19
+        pip install buildozer cython==0.29.19 kivy
         
-    - name: Setup Android SDK and NDK manually
+    - name: Manual python-for-android setup
       run: |
+        # Create necessary directories
         mkdir -p ~/.buildozer/android/platform
         cd ~/.buildozer/android/platform
         
-        # Download Android SDK
-        wget -q https://dl.google.com/android/repository/commandlinetools-linux-8512546_latest.zip
-        unzip -q commandlinetools-linux-8512546_latest.zip
-        mv cmdline-tools android-sdk
-        
-        # Download Android NDK
-        wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
-        unzip -q android-ndk-r25b-linux.zip
-        mv android-ndk-r25b android-ndk
-        
-    - name: Clone python-for-android manually
-      run: |
-        cd ~/.buildozer/android/platform
+        # Clone python-for-android
         git clone https://github.com/kivy/python-for-android.git
         cd python-for-android
         pip install -e .
         
-    - name: Build APK
+        # Setup Android SDK and NDK
+        python -m pythonforandroid.toolchain create --help
+        
+    - name: Build using direct p4a
+      run: |
+        # Use python-for-android directly
+        cd ~/.buildozer/android/platform/python-for-android
+        python -m pythonforandroid.toolchain create \
+          --dist_name=laila_chatbot \
+          --bootstrap=sdl2 \
+          --requirements=python3,kivy \
+          --arch=arm64-v8a \
+          --arch=armeabi-v7a \
+          --copy-libs \
+          --color=always \
+          --storage-dir=$GITHUB_WORKSPACE/.buildozer/android/platform/build \
+          --ndk-api=21 \
+          --ignore-setup-py \
+          --debug
+          
+    - name: Package APK
       run: |
         cd $GITHUB_WORKSPACE
         buildozer -v android debug
-        
+          
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
