@@ -1,0 +1,32 @@
+name: Build APK with Docker
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build with Buildozer Docker
+      run: |
+        docker run --rm \
+          --volume "$(pwd)":/home/user/hostcwd \
+          --volume buildozer_cache:/home/user/.buildozer \
+          --env P4A_RELEASE_KEYSTORE=/home/user/hostcwd/keystore.jks \
+          --env P4A_RELEASE_KEYSTORE_PASSWD=password \
+          --env P4A_RELEASE_KEYALIAS_PASSWD=password \
+          --env P4A_RELEASE_KEYALIAS=key \
+          kivy/buildozer -v android debug
+          
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: laila-chatbot-apk
+        path: bin/*.apk
+        retention-days: 7
