@@ -3,8 +3,7 @@ name: Build Android APK
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,20 +16,42 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.8'
+        python-version: '3.9'
         
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
-        sudo apt update
-        sudo apt install -y openjdk-8-jdk zip unzip libncurses5
-        pip install buildozer
+        sudo apt-get update
+        sudo apt-get install -y \
+          openjdk-8-jdk \
+          zip \
+          unzip \
+          libncurses5 \
+          curl \
+          git \
+          wget
         
-    - name: Build APK
+    - name: Install Python dependencies
       run: |
-        buildozer android debug
+        python -m pip install --upgrade pip
+        pip install buildozer cython==0.29.19
+        
+    - name: Set up Android SDK licenses
+      run: |
+        mkdir -p ~/.android
+        touch ~/.android/repositories.cfg
+        yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses || true
+        
+    - name: Build APK with Buildozer
+      run: |
+        buildozer android clean
+        buildozer -v android debug
+        
+    - name: List generated files
+      run: |
+        find . -name "*.apk" -type f
         ls -la bin/
         
-    - name: Upload APK
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
         name: laila-chatbot-apk
